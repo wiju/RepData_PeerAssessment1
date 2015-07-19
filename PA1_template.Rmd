@@ -1,25 +1,217 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template"
+author: "JWillis"
+date: "Saturday, July 18, 2015"
+output: html_document
 ---
 
+This R Markdown document presents the results of Coursera Reproducible Research Peer Assessment 1 assignment, which interprets data about personal movement. This analysis is done in multiple parts. The analyzed data contains the number of steps taken by an individual over a two-month period.  The steps were collected within five-minute intervals and missing values were represented as NA. The data contains 17,568 observations in a CSV file.
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
+In this document, echo is set to TRUE so peer assessors may easily view the code used.
 
 
+DATA LOADING & PRE-PROCESSING - These preliminary actions load the data and perform any needed pre-processing of the data to ensure it is easily analyzable. The data file is available locally. The variables are "steps", "date", "interval"."
+```{r, echo=TRUE}
+        dataIn <- data.frame()
+        dataIn <- read.csv("./activity.csv", colClasses = "character")
 
-## What is the average daily activity pattern?
+        ## convert steps & integer variables to numeric types from character &      
+        ## convert date variable to date type from character
+        dataIn$steps <- as.numeric(dataIn$steps)
+        dataIn$interval <- as.numeric(dataIn$interval)
+        dataIn$date <- as.Date(dataIn$date)
+
+        ## check structure & summary of data
+        str(dataIn)
+        summary(dataIn)
+```
+
+
+QUESTION 1 - What is the mean total number of steps per day?
+The histogram shows the mean total number of steps per day over the 61-day period. The individual's total step count per day varied widely with no particular trend. The individual's highest step count per day occurred near the end of November, a traditional holiday period in the US. 
+The histogram is also annotated with the cumulative mean and the cumulative median of the total number of steps. NA values were ignored in this representation.
+```{r, echo=TRUE}
+        library(plyr)
+        library(dplyr)
+        dataBySum <- data.frame
+
+        dataByDate <- group_by(dataIn, date) 
+        dataBySum <- summarise(dataByDate, sumSteps = sum(steps, na.rm=TRUE)) 
+
+        ## calculate the mean & median of the daily step sums, ignoring NAs
+        sumStepMean <- round(mean(dataBySum$sumSteps, na.rm=TRUE), digits=2)
+        sumStepMedian <- median(dataBySum$sumSteps, na.rm=TRUE)
+
+        ## plot a histogram of the total number of steps per day
+        ## include the mean & median daily steps on the plot for easy reference
+        with(dataBySum, plot(date, sumSteps, type="h", col="blue", 
+                              lwd = 5,
+                              xlab="Date", 
+                              ylab="Total Steps", 
+                              main="Total Steps by Date - One Person",
+                              sub= paste(
+                                      "Mean daily steps: ", sumStepMean, 
+                                      "  -   Median daily steps: ", 
+                                         sumStepMedian),
+                             col.sub = "blue", cex.sub = 0.8))
+```
+
+
+QUESTION 2 - What is the average daily activity pattern?
+The average daily activity pattern is presented in a time-series diagram that shows averaged values for the individual's steps during the various five-minute intervals in a day. The intervals may be read as 24-hour clock times. The data shows a clear maximum activity time around 0835 (8:35 am) and an inferred sleep period from approximately 2200 (10:00 pm) to 0500 (5:00 am). 
+The time-series is also annotated with the interval with the highest average step count and that step count. NA values were ignored in this representation.
+```{r, echo=TRUE} 
+        library(plyr)
+        library(dplyr)
+
+        dataByInterval <- data.frame()
+        dataMeanByInterval <- data.frame()
+
+        ## group data by interval saving intermediate step & ignoring NAs
+        dataByInterval <- group_by(dataIn, interval) 
+        dataMeanByInterval <- summarise(dataByInterval, 
+                                        meanSteps = mean(steps, na.rm=TRUE)) 
+
+        ## calculate the max mean steps, ignoring NAs
+        maxSteps <- round(max(dataMeanByInterval$meanSteps, na.rm=TRUE), digits=1)
+
+        ## calculate the max mean step sum interval
+        maxIntervalRow <- which.max(dataMeanByInterval$meanSteps)
+        maxInterval <- dataMeanByInterval$interval[maxIntervalRow]
+
+        ## plot a time series of the total number of steps per interval number
+        ## also annotate the plot with the interval with the max mean steps &
+        ## the max number of steps
+        with(dataMeanByInterval, plot(interval, meanSteps, type="l", col="blue", 
+                lwd = 2,
+                xlab="Five-minute Interval (read as 24-hour clock)", 
+                ylab="Average Steps Taken", 
+                main="Average Steps by Interval - One Person", 
+                sub= paste("Interval ", maxInterval, 
+                           " has the maximum average steps: ", 
+                           maxSteps),col.sub = "blue", cex.sub = 0.8))
+
+```
+
+QUESTION 3 - What does this data look like with input for missing values?
+The number of missing values (steps = NA) is calculated and shown as the total number and as a percentage. 
+The missing values are then replaced with the average increment step value. This filled in the low levels of steps data, and resulted in a higher mean step count. The median step value remained the same. 
+```{r, echo=TRUE} 
+        library(plyr)
+        library(dplyr)
+
+
+        dataByDate <- data.frame()
+        dataBySum <- data.frame()
+        dataByIntervalNoNA <- data.frame()
+        dataMeanByIntervalNoNA <- data.frame()
+        dataInNoNA <- data.frame()
+
+        ## instantiate dataInNoNA to dataIn so can replace NAs in it
+        dataInNoNA <- dataIn
+
+
+        ## Calculate & report the total number of missing values
+        numNARows <- nrow(dataIn[is.na(dataIn$steps), ])
+        numTotalRows <- nrow(dataIn)
+        percentNA <- round((numNARows*100 / numTotalRows), digits=1)
+        print(paste("This data contains", numNARows, 
+                    "NA steps observations of", numTotalRows, 
+                    "total steps observations (", percentNA, "%)"))
+
+        dataByDate <- group_by(dataIn, date) 
+        dataBySum <- summarise(dataByDate, sumSteps = sum(steps, na.rm=TRUE)) 
+
+        ## calculate the mean of the daily step sums, ignoring NAs
+        sumStepMean <- round(mean(dataBySum$sumSteps, na.rm=TRUE), digits=2)
+
+        ## normalize the daily step sum mean to a single five-minute interval
+        intervalStepMean <- sumStepMean/(24*12)
+
+        ## replace NAs with intervalStepMean
+        dataInNoNA$steps[is.na(dataInNoNA$steps)] <- intervalStepMean
+
+        ## group and summarize so can find the sum 
+        dataByDateNoNA <- group_by(dataInNoNA, date) 
+        dataBySumNoNA <- summarise(dataByDateNoNA, 
+                                   sumSteps = sum(steps, na.rm=TRUE)) 
+
+
+## calculate the mean & median of the daily step sums, ignoring NAs
+        sumStepMeanN <- round(mean(dataBySumNoNA$sumSteps, na.rm=TRUE), digits=2)
+        sumStepMedianN <- median(dataBySumNoNA$sumSteps, na.rm=TRUE)
+
+        ## plot a histogram of the total number of steps per day
+        ## include the mean & median daily steps on the plot for easy reference
+        with(dataBySumNoNA, plot(date, sumSteps, type="h", col="blue", 
+                lwd = 5,
+                xlab="Date", 
+                ylab="Total Steps", 
+                main="Total Steps by Date - One Person - 
+                     NAs Replaced By Interval Step Mean",
+                sub= paste( "Mean daily steps: ", sumStepMeanN, 
+                            "  -   Median daily steps: ", sumStepMedianN),
+                            col.sub = "blue", cex.sub = 0.8))
+
+
+```
+
+QUESTION 4 - Are there differences in activity patterns between weekdays and weekends?
+This question is answered with the dataset with NAs replaced by the interval step mean. 
+
+```{r, echo=TRUE} 
+        library(plyr)
+        library(dplyr)
+        library(lattice)
+
+        dataByDate <- data.frame()
+        dataBySum <- data.frame()
+        dataByIntervalNoNA <- data.frame()
+        dataMeanByIntervalNoNA <- data.frame()
+        dataInNoNA <- data.frame()
+
+        ## instantiate dataInNoNA to dataIn so can replace NAs in it
+        dataInNoNA <- dataIn
+
+        dataByDate <- group_by(dataIn, date) 
+        dataBySum <- summarise(dataByDate, sumSteps = sum(steps, na.rm=TRUE)) 
+
+        ## calculate the mean of the daily step sums, ignoring NAs
+        sumStepMean <- round(mean(dataBySum$sumSteps, na.rm=TRUE), digits=2)
+
+        ## normalize the daily step sum mean to a single five-minute interval
+        intervalStepMean <- sumStepMean/(24*12)
+
+        ## replace NAs with intervalStepMean
+        dataInNoNA$steps[is.na(dataInNoNA$steps)] <- intervalStepMean
+
+        ## mutate to add dayType (weekday or weekend)
+        ## then group and summarize  
+        dataByIntervalNoNA <- mutate(dataInNoNA, dayType =
+                              ifelse((weekdays(date) == "Saturday" | 
+                                     weekdays(date) == "Sunday"), "weekend",                           
+                                    "weekday")) 
+
+        dataMeanByIntervalNoNA <- group_by(dataByIntervalNoNA, interval, 
+                                           dayType) %>%
+                                  summarise(meanSteps = mean(steps))
+
+        ## plot a time series of the mean number of steps per interval number
+##        xyplot((steps ~ interval | factor(dayType),
+##                data = dataMeanByIntervalNoNA$meanSteps,
+##                type = "l",
+##                lwd = 2,
+##                xlab="Five-minute Interval (read as 24-hour clock)", 
+##                ylab="Average Steps Taken", 
+##                layout = c(1, 2))
+##                main="Average Steps by Interval - One Person - NAs Replaced by Mean Interval Steps", 
 
 
 
-## Imputing missing values
+
+```
 
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+- End of document - 
