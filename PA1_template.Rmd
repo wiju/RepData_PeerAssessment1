@@ -197,17 +197,24 @@ This question is answered with the dataset with NAs replaced by the interval ste
                                   summarise(meanSteps = mean(steps))
 
         ## plot a time series of the mean number of steps per interval number
-##        xyplot((steps ~ interval | factor(dayType),
-##                data = dataMeanByIntervalNoNA$meanSteps,
-##                type = "l",
-##                lwd = 2,
-##                xlab="Five-minute Interval (read as 24-hour clock)", 
-##                ylab="Average Steps Taken", 
-##                layout = c(1, 2))
-##                main="Average Steps by Interval - One Person - NAs Replaced by Mean Interval Steps", 
 
+library(ggplot2)
 
+        ## Weekday plot
+        p1 <- ggplot(dataMeanByIntervalNoNA, aes(x=interval, y=meanSteps,   
+                        group    ="weekday")) +  geom_line() +
+                        ggtitle("Weekday Average Steps by Interval")
 
+        ## Weekend plot
+        p2 <- ggplot(dataMeanByIntervalNoNA, aes(x=interval, y=meanSteps,   
+                        group="weekend")) + geom_line() +
+                        ggtitle("Weekend Average Steps by Interval")
+
+library(grid) 
+        ## print the plots
+        pushViewport(viewport(layout = grid.layout(2, 1)))
+        print(p1, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+        print(p2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
 
 ```
 
